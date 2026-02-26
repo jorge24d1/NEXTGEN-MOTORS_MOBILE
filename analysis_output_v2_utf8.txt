@@ -1,0 +1,55 @@
+﻿Analyzing mobile_app...                                         
+
+   info - Don't invoke 'print' in production code - lib\main.dart:12:3 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:23:5 - avoid_print
+   info - Constructors for public widgets should have a named 'key' parameter - lib\main.dart:33:7 - use_key_in_widget_constructors
+   info - Unnecessary 'const' keyword - lib\main.dart:45:20 - unnecessary_const
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\main.dart:46:11 - deprecated_member_use
+   info - Unnecessary 'const' keyword - lib\main.dart:46:27 - unnecessary_const
+  error - The argument type 'CardTheme' can't be assigned to the parameter type 'CardThemeData?'.  - lib\main.dart:63:20 - argument_type_not_assignable
+   info - Invalid use of a private type in a public API - lib\screens\chat_screen.dart:8:3 - library_private_types_in_public_api
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\chat_screen.dart:80:36 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_screen.dart:141:59 - deprecated_member_use
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\chat_screen.dart:196:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\chat_screen.dart:309:62 - deprecated_member_use
+   info - Invalid use of a private type in a public API - lib\screens\home_screen.dart:10:3 - library_private_types_in_public_api
+   info - Don't use 'BuildContext's across async gaps - lib\screens\home_screen.dart:33:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\home_screen.dart:118:39 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_screen.dart:158:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\home_screen.dart:206:35 - deprecated_member_use
+   info - Constructors for public widgets should have a named 'key' parameter - lib\screens\login_screen.dart:7:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\screens\login_screen.dart:9:3 - library_private_types_in_public_api
+   info - Don't invoke 'print' in production code - lib\screens\login_screen.dart:41:5 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\screens\login_screen.dart:59:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\login_screen.dart:96:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\login_screen.dart:100:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\login_screen.dart:107:28 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\login_screen.dart:322:52 - deprecated_member_use
+   info - Constructors for public widgets should have a named 'key' parameter - lib\screens\splash_screen.dart:6:7 - use_key_in_widget_constructors
+   info - Invalid use of a private type in a public API - lib\screens\splash_screen.dart:8:3 - library_private_types_in_public_api
+   info - Don't use 'BuildContext's across async gaps - lib\screens\splash_screen.dart:40:40 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\splash_screen.dart:42:40 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\screens\splash_screen.dart:45:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\screens\splash_screen.dart:47:38 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\services\biometric_service.dart:23:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\biometric_service.dart:39:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:46:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:58:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:69:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:96:7 - avoid_print
+
+flutter : 37 issues found. (ran 
+in 5.3s)
+En línea: 1 Carácter: 16
++ cd mobile_app; flutter analyze 
+> analysis_output_v2.txt 2>&1; 
+Get-Con ...
++                ~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : No 
+   tSpecified: (37 issues found  
+  . (ran in 5.3s):String) [],    
+ RemoteException
+    + FullyQualifiedErrorId : Na 
+   tiveCommandError
+ 
