@@ -9,12 +9,15 @@ class ApiService {
   // 3. Ngrok (Link público): Pon aquí el link que te da ngrok http 8080
 
   static const String baseUrl =
-      'https://sage-unrefusable-tearingly.ngrok-free.dev/api/usuario'; // URL de Ngrok activa
+      'https://nextgen-motors.onrender.com/api/usuario'; // URL de Ngrok activa
 
   Future<Map<String, dynamic>> login(String correo, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
       body: {'correo': correo, 'password': password},
+    ).timeout(
+      const Duration(seconds: 60), // Le damos 60 segundos a Render para despertar
+      onTimeout: () => throw Exception('El servidor está despertando, vuelve a intentarlo en unos segundos.'),
     );
 
     if (response.statusCode == 200) {
@@ -26,6 +29,9 @@ class ApiService {
         await prefs.setString('nombre', data['nombre']);
       }
       return data;
+    } else if (response.statusCode == 401) {
+      // Si el servidor responde 401 es porque las credenciales son incorrectas
+      throw Exception('Correo o contraseña incorrectos');
     } else {
       throw Exception('Error en login: ${response.statusCode}');
     }
