@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_app/services/api_service.dart';
 import 'package:mobile_app/screens/home_screen.dart';
+import 'package:mobile_app/screens/admin_screen.dart';
 import 'package:mobile_app/services/notification_service.dart';
 import 'package:mobile_app/services/biometric_service.dart';
 
@@ -173,10 +174,17 @@ class _LoginScreenState extends State<LoginScreen>
         }
         await NotificationService().initNotifications();
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (response['role'] == 'ADMINISTRADOR' || response['role'] == 'TRABAJADOR') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminScreen()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -678,3 +686,5 @@ class _DecorativeStripesPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+

@@ -5,7 +5,10 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   flutter_secure_storage_windows
+  high_chart
   local_auth_windows
+  url_launcher_windows
+  webview_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

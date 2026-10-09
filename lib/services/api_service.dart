@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +27,7 @@ class ApiService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', data['userId']);
         await prefs.setString('nombre', data['nombre']);
+        if (data['role'] != null) await prefs.setString('role', data['role']);
       }
       return data;
     } else if (response.statusCode == 401) {
@@ -80,4 +81,5 @@ class ApiService {
     }
   }
 }
+
 
