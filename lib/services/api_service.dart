@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,7 +9,7 @@ class ApiService {
   // 3. Ngrok (Link público): Pon aquí el link que te da ngrok http 8080
 
   static const String baseUrl =
-      'https://nextgen-motors.onrender.com/api/usuario'; // URL de Ngrok activa
+      'https://sage-unrefusable-tearingly.ngrok-free.dev/api/usuario'; // URL de Ngrok activa
 
   Future<Map<String, dynamic>> login(String correo, String password) async {
     final response = await http.post(
@@ -80,3 +80,4 @@ class ApiService {
     }
   }
 }
+
