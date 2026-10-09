@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/api_service.dart';
 import 'package:mobile_app/screens/chat_screen.dart';
@@ -17,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _apiService = ApiService();
   List<dynamic> _citas = [];
   bool _isLoading = true;
+  String _nombreUsuario = "Usuario";
 
   @override
   void initState() {
@@ -36,8 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _cargarCitas() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final nombreGuardado = prefs.getString('nombre') ?? "Usuario";
       final citas = await _apiService.getCitas();
       setState(() {
+        _nombreUsuario = nombreGuardado;
         _citas = citas;
         _isLoading = false;
       });
@@ -145,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: const TextStyle(color: Colors.white54, fontSize: 16),
         ),
         Text(
-          "David", // Aquí se podría usar el nombre de SharedPreferences
+          _nombreUsuario,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 28,
@@ -325,3 +329,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+
