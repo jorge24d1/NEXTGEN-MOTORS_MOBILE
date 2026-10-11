@@ -30,11 +30,11 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add({"text": text, "isUser": isUser, "vehicle": vehicle});
     });
     // Scroll al fondo
-    Future.delayed(Duration(milliseconds: 100), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -51,23 +51,45 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _apiService.obtenerRecomendacion(text);
-      final botReply = response['textoRespuesta'] ?? "Lo siento, no entendí.";
-      final vehicles = response['vehiculosRecomendados'] as List<dynamic>?;
+      // 1. Armamos el historial de conversación para que Dante recuerde el contexto
+      final historial = _messages
+          .where((m) => m['text'] != null)
+          .map((m) => {
+                'role': m['isUser'] == true ? 'user' : 'assistant',
+                'content': m['text'] as String,
+              })
+          .toList();
 
-      Map<String, dynamic>? vehicleData;
-      if (vehicles != null && vehicles.isNotEmpty) {
-        vehicleData = vehicles.first;
+      // 2. Enviamos el mensaje con historial a Dante
+      final response = await _apiService.enviarMensajeDante(text, historial: historial);
+
+      if (response['success'] == true) {
+        final botReply = response['respuesta'] ??
+            response['textoRespuesta'] ??
+            "¡Listo! Aquí tienes la información.";
+        final vehicles = response['vehiculosRecomendados'] as List<dynamic>?;
+
+        Map<String, dynamic>? vehicleData;
+        if (vehicles != null && vehicles.isNotEmpty) {
+          vehicleData = vehicles.first as Map<String, dynamic>?;
+        }
+
+        _addMessage(botReply, false, vehicle: vehicleData);
+      } else {
+        _addMessage(
+          response['respuesta'] ?? "Dante no pudo procesar tu mensaje en este momento.",
+          false,
+        );
       }
-
-      _addMessage(botReply, false, vehicle: vehicleData);
     } catch (e) {
       _addMessage(
-        "Lo siento, tuve un problema de conexión. Inténtalo de nuevo.",
+        "Lo siento, hubo un problema al conectar con Dante. Inténtalo de nuevo.",
         false,
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -77,7 +99,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Asistente Dante AI'),
         leading: IconButton(
@@ -94,8 +116,8 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                final isUser = msg['isUser'];
-                final vehicle = msg['vehicle'];
+                final isUser = msg['isUser'] == true;
+                final vehicle = msg['vehicle'] as Map<String, dynamic>?;
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -108,10 +130,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         mainAxisAlignment: isUser
                             ? MainAxisAlignment.end
                             : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isUser)
                             const Padding(
-                              padding: EdgeInsets.only(right: 8),
+                              padding: EdgeInsets.only(right: 8, top: 4),
                               child: CircleAvatar(
                                 radius: 14,
                                 backgroundColor: Color(0xFF2196F3),
@@ -128,7 +151,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               decoration: BoxDecoration(
                                 color: isUser
                                     ? colorScheme.primary
-                                    : colorScheme.surface,
+                                    : const Color(0xFF1E2433),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(20),
                                   topRight: const Radius.circular(20),
@@ -138,17 +161,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                 boxShadow: [
                                   if (!isUser)
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withOpacity(0.15),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
                                 ],
                               ),
                               child: Text(
-                                msg['text'],
+                                msg['text'] ?? '',
                                 style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: isUser ? Colors.white : Colors.white,
+                                  color: Colors.white,
                                   fontSize: 15,
+                                  height: 1.4,
                                 ),
                               ),
                             ),
@@ -193,25 +217,25 @@ class _ChatScreenState extends State<ChatScreen> {
         MediaQuery.of(context).padding.bottom + 16,
       ),
       decoration: BoxDecoration(
-        color: colorScheme.background,
-        border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+        color: colorScheme.surface,
+        border: const Border(top: BorderSide(color: Colors.white10, width: 0.5)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: colorScheme.surface,
+                color: const Color(0xFF1E2433),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: TextField(
                 controller: _controller,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Pregúntale a Dante...',
-                  hintStyle: const TextStyle(color: Colors.white30),
+                  hintStyle: TextStyle(color: Colors.white30),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 12,
                   ),
@@ -265,7 +289,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "${v['marca']} ${v['modelo']}",
+                      "${v['marca'] ?? ''} ${v['modelo'] ?? ''}",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
@@ -279,12 +303,12 @@ class _ChatScreenState extends State<ChatScreen> {
               _buildVehicleDetail(
                 Icons.calendar_today,
                 "Año",
-                v['año'].toString(),
+                (v['año'] ?? v['anio'] ?? v['year'] ?? '').toString(),
               ),
               _buildVehicleDetail(
                 Icons.attach_money,
                 "Precio",
-                "\$${v['precio']}",
+                "\$${v['precio'] ?? '0'}",
               ),
               _buildVehicleDetail(
                 Icons.local_gas_station,

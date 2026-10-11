@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:highcharts_flutter/highcharts.dart';
+import '../services/api_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -188,15 +189,14 @@ class _AdvancedChartsView extends StatefulWidget {
 }
 
 class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
+  final ApiService _apiService = ApiService();
+
   bool _loading = true;
   String _error = '';
   int _total = 0;
   int _conInteres = 0;
   int _citaAprobada = 0;
   int _clientePotencial = 0;
-
-  static const String _baseUrl =
-      'https://sage-unrefusable-tearingly.ngrok-free.dev';
 
   @override
   void initState() {
@@ -209,41 +209,22 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
       _loading = true;
       _error = '';
     });
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/prediccion/embudo'),
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final rawBody = response.body.trim();
-        if (rawBody.startsWith('<')) {
-          setState(() {
-            _error = 'El servidor devolvió HTML en vez de datos JSON. Reinicia el servidor Spring Boot para aplicar los permisos de seguridad.';
-            _loading = false;
-          });
-          return;
-        }
-        final data = json.decode(rawBody);
-        setState(() {
-          _total = (data['total'] ?? 0) as int;
-          _conInteres = (data['conInteres'] ?? 0) as int;
-          _citaAprobada = (data['citaAprobada'] ?? 0) as int;
-          _clientePotencial = (data['clientePotencial'] ?? 0) as int;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Error del servidor: ${response.statusCode}';
-          _loading = false;
-        });
-      }
-    } catch (e) {
+    final data = await _apiService.obtenerDatosEmbudo();
+
+    if (!mounted) return;
+
+    if (data['success'] == true) {
       setState(() {
-        _error = 'No se pudo conectar: $e';
+        _total = (data['total'] ?? 0) as int;
+        _conInteres = (data['conInteres'] ?? 0) as int;
+        _citaAprobada = (data['citaAprobada'] ?? 0) as int;
+        _clientePotencial = (data['clientePotencial'] ?? 0) as int;
+        _loading = false;
+      });
+    } else {
+      setState(() {
+        _error = data['message'] ?? 'Error al obtener los datos del embudo';
         _loading = false;
       });
     }
@@ -498,4 +479,3 @@ class _TarjetaMetrica extends StatelessWidget {
     );
   }
 }
-

@@ -3,83 +3,184 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // CONFIGURACIÓN DE CONEXIÓN:
-  // 1. Azure (Producción): 'https://nextgen-motors2-bsbudccxcnadgabd.canadacentral-01.azurewebsites.net/api/usuario'
-  // 2. Local (Emulador Android): 'http://10.0.2.2:8080/api/usuario'
-  // 3. Ngrok (Link público): Pon aquí el link que te da ngrok http 8080
+  // ── URL BASE PRINCIPAL EN RENDER ──
+  static const String baseUrl = 'https://nextgen-motors-3xcw.onrender.com';
 
-  static const String baseUrl =
-      'https://sage-unrefusable-tearingly.ngrok-free.dev/api/usuario'; // URL de Ngrok activa
+  // Timeout de 60s por si Render Free tarda en despertar de suspensión
+  static const Duration _timeout = Duration(seconds: 60);
 
+  // ===========================================================================
+  // 1. AUTENTICACIÓN / LOGIN
+  // ===========================================================================
   Future<Map<String, dynamic>> login(String correo, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      body: {'correo': correo, 'password': password},
-    ).timeout(
-      const Duration(seconds: 60), // Le damos 60 segundos a Render para despertar
-      onTimeout: () => throw Exception('El servidor está despertando, vuelve a intentarlo en unos segundos.'),
-    );
+    final url = Uri.parse('$baseUrl/api/usuario/login');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        // Guardar userId para uso futuro
+    try {
+      final response = await http.post(
+        url,
+        body: {
+          'correo': correo.trim(),
+          'password': password,
+        },
+      ).timeout(_timeout);
+
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Guardar sesión del usuario en SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userId', data['userId']);
-        await prefs.setString('nombre', data['nombre']);
+        if (data['userId'] != null) await prefs.setString('userId', data['userId']);
+        if (data['nombre'] != null) await prefs.setString('nombre', data['nombre']);
         if (data['role'] != null) await prefs.setString('role', data['role']);
+
+        return {
+          'success': true,
+          'userId': data['userId'],
+          'nombre': data['nombre'],
+          'role': data['role'], // 'CLIENTE', 'ADMINISTRADOR', 'TRABAJADOR'
+          'message': data['message'] ?? 'Login exitoso',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Credenciales incorrectas',
+        };
       }
-      return data;
-    } else if (response.statusCode == 401) {
-      // Si el servidor responde 401 es porque las credenciales son incorrectas
-      throw Exception('Correo o contraseña incorrectos');
-    } else {
-      throw Exception('Error en login: ${response.statusCode}');
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error de conexión con el servidor: $e',
+      };
     }
   }
 
+  // ===========================================================================
+  // 2. CITAS DEL USUARIO
+  // ===========================================================================
   Future<List<dynamic>> getCitas() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('userId');
 
     if (userId == null) throw Exception('Usuario no logueado');
 
-    final response = await http.get(Uri.parse('$baseUrl/$userId/citas'));
+    final url = Uri.parse('$baseUrl/api/usuario/$userId/citas');
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Error al cargar citas');
+    try {
+      final response = await http.get(url).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes));
+      } else {
+        throw Exception('Error al cargar citas: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión al cargar citas: $e');
     }
   }
 
+  // ===========================================================================
+  // 3. TOKEN FCM (NOTIFICACIONES PUSH)
+  // ===========================================================================
   Future<void> sendFcmToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('userId');
 
     if (userId != null) {
-      await http.post(
-        Uri.parse('$baseUrl/$userId/fcm-token'),
-        body: {'token': token},
-      );
+      final url = Uri.parse('$baseUrl/api/usuario/$userId/fcm-token');
+      try {
+        await http.post(
+          url,
+          body: {'token': token},
+        ).timeout(_timeout);
+      } catch (e) {
+        print('Error enviando token FCM: $e');
+      }
     }
   }
 
-  // Nuevo método para Chatbot Gemini
-  Future<Map<String, dynamic>> obtenerRecomendacion(String mensaje) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/recomendacion'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'mensaje': mensaje}),
-    );
+  // ===========================================================================
+  // 4. CHATBOT DE DANTE
+  // ===========================================================================
+  Future<Map<String, dynamic>> enviarMensajeDante(
+    String mensaje, {
+    List<Map<String, String>> historial = const [],
+  }) async {
+    final url = Uri.parse('$baseUrl/api/chatbot/mensaje');
 
-    if (response.statusCode == 200) {
-      // Decodificamos utf8 para caracteres especiales en español
-      return json.decode(utf8.decode(response.bodyBytes));
-    } else {
-      throw Exception('Error al conectar con Dante AI');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'mensaje': mensaje,
+          'historial': historial,
+        }),
+      ).timeout(_timeout);
+
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'respuesta': data['respuesta'] ?? '',
+          'vehiculosRecomendados': data['vehiculosRecomendados'] ?? [],
+        };
+      } else {
+        return {
+          'success': false,
+          'respuesta': data['respuesta'] ?? 'Dante no pudo procesar tu mensaje.',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'respuesta': 'Error al comunicar con Dante: $e',
+      };
+    }
+  }
+
+  // Alias para mantener compatibilidad con pantallas existentes
+  Future<Map<String, dynamic>> obtenerRecomendacion(String mensaje) async {
+    return enviarMensajeDante(mensaje);
+  }
+
+  // ===========================================================================
+  // 5. EMBUDO PREDICTIVO (ADMINISTRADOR)
+  // ===========================================================================
+  Future<Map<String, dynamic>> obtenerDatosEmbudo() async {
+    final url = Uri.parse('$baseUrl/api/prediccion/embudo');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+        },
+      ).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return {
+          'success': true,
+          'total': data['total'] ?? 0,
+          'conInteres': data['conInteres'] ?? 0,
+          'citaAprobada': data['citaAprobada'] ?? 0,
+          'clientePotencial': data['clientePotencial'] ?? 0,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': 'Error al obtener métricas del embudo (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error de conexión: $e',
+      };
     }
   }
 }
-
-
