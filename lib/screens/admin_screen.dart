@@ -1,9 +1,8 @@
-﻿import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:highcharts_flutter/highcharts.dart';
 import '../services/api_service.dart';
+import '../widgets/power_bi_view.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -108,71 +107,18 @@ class _AdminScreenState extends State<AdminScreen> {
 // ─────────────────────────────────────────────
 //  VISTA 1: Gráficos de PowerBI
 // ─────────────────────────────────────────────
+const String _kPowerBiReportUrl =
+    "https://app.powerbi.com/view?r=eyJrIjoiNTIyYjhkZGItYjVjOC00YjYwLWEyOWQtYTFkNGU2ZWI3MGNmIiwidCI6IjlkMTJiZjNmLWU0ZjYtNDdhYi05MTJmLTFhMmYwZmM0OGFhNCIsImMiOjR9";
+
 class _PowerBIView extends StatelessWidget {
   const _PowerBIView();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.pie_chart_outline,
-                size: 70,
-                color: Colors.amber,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "Reportes PowerBI",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Aquí se integrarán los tableros y dashboards interactivos de Microsoft PowerBI para análisis empresarial.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 28),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Actualizando conexión con PowerBI..."),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text("Actualizar Tableros"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.black87,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
+    return const SizedBox.expand(
+      child: PowerBiView(
+        url: _kPowerBiReportUrl,
+        alturaBarra: 56.0,
       ),
     );
   }
