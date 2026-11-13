@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/api_service.dart';
+import 'package:mobile_app/services/cache_service.dart';
 import 'package:mobile_app/screens/chat_screen.dart';
 import 'package:mobile_app/screens/appointment_details_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,7 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _apiService = ApiService();
   List<dynamic> _citas = [];
   bool _isLoading = true;
+  bool _isOffline = false; // Indica si los datos vienen del caché
   String _nombreUsuario = "Usuario";
+  String? _lastSyncTime;
 
   @override
   void initState() {
@@ -35,21 +38,59 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _formatSyncTime(String? isoTime) {
+    if (isoTime == null) return '';
+    try {
+      final dt = DateTime.parse(isoTime);
+      return DateFormat("d MMM, h:mm a").format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<void> _cargarCitas() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final nombreGuardado = prefs.getString('nombre') ?? "Usuario";
+
+      // Intentar cargar desde API (getCitas() ahora devuelve caché si falla)
       final citas = await _apiService.getCitas();
+
+      // Obtener fecha de la última sincronización
+      final timestamp = await CacheService.getCitasCacheTimestamp();
+
+      if (!mounted) return;
       setState(() {
         _nombreUsuario = nombreGuardado;
         _citas = citas;
         _isLoading = false;
+        _isOffline = false;
+        _lastSyncTime = timestamp;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error cargando citas')));
-      setState(() => _isLoading = false);
+      // Si falla completamente, cargar desde caché directamente
+      final cachedCitas = await CacheService.getCachedCitas();
+      final prefs = await SharedPreferences.getInstance();
+      final nombreGuardado = prefs.getString('nombre') ?? "Usuario";
+      final timestamp = await CacheService.getCitasCacheTimestamp();
+
+      if (!mounted) return;
+      setState(() {
+        _nombreUsuario = nombreGuardado;
+        _citas = cachedCitas;
+        _isLoading = false;
+        _isOffline = true;
+        _lastSyncTime = timestamp;
+      });
+
+      if (cachedCitas.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sin conexión y sin datos guardados'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -58,12 +99,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: _isLoading
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _cargarCitas,
                 child: CustomScrollView(
                   slivers: [
                     _buildSliverAppBar(),
+                    // Banner offline
+                    if (_isOffline)
+                      SliverToBoxAdapter(child: _buildOfflineBanner()),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
@@ -93,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         return _buildCitaItem(cita);
                       }, childCount: _citas.length),
                     ),
-                    SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
               ),
@@ -102,12 +146,64 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ChatScreen()),
+            MaterialPageRoute(builder: (context) => const ChatScreen()),
           );
         },
-        label: Text('Asistente Dante'),
-        icon: Icon(Icons.auto_awesome),
-        backgroundColor: Color(0xFF2196F3),
+        label: const Text('Asistente Dante'),
+        icon: const Icon(Icons.auto_awesome),
+        backgroundColor: const Color(0xFF2196F3),
+      ),
+    );
+  }
+
+  /// Banner que se muestra cuando los datos vienen del caché (sin conexión)
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange.shade800.withOpacity(0.9),
+            Colors.orange.shade900.withOpacity(0.9),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Modo sin conexión',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                if (_lastSyncTime != null)
+                  Text(
+                    'Última actualización: ${_formatSyncTime(_lastSyncTime)}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _cargarCitas();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -134,8 +230,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _cerrarSesion() async {
     final prefs = await SharedPreferences.getInstance();
+    // Limpiar únicamente las credenciales de sesión activa
     await prefs.remove('userId');
     await prefs.remove('nombre');
+    await prefs.remove('role');
+    if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
@@ -161,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNextAppointmentCard() {
-    if (_citas.isEmpty) return SizedBox.shrink();
+    if (_citas.isEmpty) return const SizedBox.shrink();
 
     final proximaCita = _citas.first;
     final estado = proximaCita['estado'] ?? 'Pendiente';
@@ -197,10 +296,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   "PRÓXIMA CITA",
                   style: TextStyle(
                     color: Colors.white70,
@@ -209,7 +308,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     letterSpacing: 1.5,
                   ),
                 ),
-                Icon(Icons.calendar_month, color: Colors.white70, size: 20),
+                Row(
+                  children: [
+                    if (_isOffline)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'CACHÉ',
+                          style: TextStyle(
+                            color: Colors.orangeAccent,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    const Icon(
+                      Icons.calendar_month,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -329,5 +456,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-

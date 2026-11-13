@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/api_service.dart';
+import 'package:mobile_app/services/cache_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -13,22 +14,43 @@ class _ChatScreenState extends State<ChatScreen> {
   final ApiService _apiService = ApiService();
   final List<Map<String, dynamic>> _messages = []; // {text, isUser, vehicle?}
   bool _isLoading = false;
+  bool _restoredFromCache = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Mensaje de bienvenida inicial
-    _addMessage(
-      "¡Hola! Soy Dante 🤖, tu asesor experto de NextGen Motors. ¿Qué tipo de vehículo estás buscando hoy?",
-      false,
-    );
+    _loadCachedHistory();
+  }
+
+  /// Carga el historial guardado del caché al iniciar
+  Future<void> _loadCachedHistory() async {
+    final cached = await CacheService.getCachedChatHistory();
+    if (cached.isNotEmpty) {
+      setState(() {
+        _messages.addAll(cached);
+        _restoredFromCache = true;
+      });
+      _scrollToBottom();
+    } else {
+      // Mensaje de bienvenida inicial solo si no hay historial
+      _addMessage(
+        "¡Hola! Soy Dante 🤖, tu asesor experto de NextGen Motors. ¿Qué tipo de vehículo estás buscando hoy?",
+        false,
+      );
+    }
   }
 
   void _addMessage(String text, bool isUser, {Map<String, dynamic>? vehicle}) {
     setState(() {
       _messages.add({"text": text, "isUser": isUser, "vehicle": vehicle});
     });
+    // Guardar historial en caché cada vez que se agrega un mensaje
+    _saveChatHistory();
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
     // Scroll al fondo
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
@@ -39,6 +61,33 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     });
+  }
+
+  /// Persiste el historial del chat en almacenamiento local
+  Future<void> _saveChatHistory() async {
+    // Guardamos solo texto y isUser (sin vehicle para simplicidad)
+    final toCache = _messages.map((m) {
+      return {
+        'text': m['text'],
+        'isUser': m['isUser'],
+        // Guardar vehicle si existe (como Map serializable)
+        if (m['vehicle'] != null) 'vehicle': m['vehicle'],
+      };
+    }).toList();
+    await CacheService.cacheChatHistory(toCache);
+  }
+
+  /// Limpia el historial y empieza una nueva conversación
+  Future<void> _clearHistory() async {
+    await CacheService.clearChatHistory();
+    setState(() {
+      _messages.clear();
+      _restoredFromCache = false;
+    });
+    _addMessage(
+      "¡Hola! Soy Dante 🤖, tu asesor experto de NextGen Motors. ¿Qué tipo de vehículo estás buscando hoy?",
+      false,
+    );
   }
 
   Future<void> _sendMessage() async {
@@ -83,7 +132,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       _addMessage(
-        "Lo siento, hubo un problema al conectar con Dante. Inténtalo de nuevo.",
+        "Lo siento, hubo un problema al conectar con Dante. Tu historial está guardado localmente.",
         false,
       );
     } finally {
@@ -106,9 +155,74 @@ class _ChatScreenState extends State<ChatScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Botón para limpiar historial
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 22),
+            tooltip: 'Nueva conversación',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: const Color(0xFF1E2433),
+                  title: const Text(
+                    '¿Nueva conversación?',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  content: const Text(
+                    'Se borrará el historial del chat guardado.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _clearHistory();
+                      },
+                      child: const Text(
+                        'Borrar',
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // Banner de historial restaurado
+          if (_restoredFromCache)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFF2196F3).withOpacity(0.15),
+              child: Row(
+                children: [
+                  const Icon(Icons.history, color: Color(0xFF2196F3), size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Conversación anterior restaurada',
+                      style: TextStyle(
+                        color: Color(0xFF2196F3),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _restoredFromCache = false),
+                    child: const Icon(Icons.close, color: Colors.white38, size: 16),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,

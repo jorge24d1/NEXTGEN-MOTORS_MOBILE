@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_app/services/cache_service.dart';
 
 class ApiService {
   // ── URL BASE PRINCIPAL EN RENDER ──
@@ -33,6 +34,9 @@ class ApiService {
         if (data['nombre'] != null) await prefs.setString('nombre', data['nombre']);
         if (data['role'] != null) await prefs.setString('role', data['role']);
 
+        // Registrar última sincronización exitosa
+        await CacheService.updateLastSync();
+
         return {
           'success': true,
           'userId': data['userId'],
@@ -55,7 +59,7 @@ class ApiService {
   }
 
   // ===========================================================================
-  // 2. CITAS DEL USUARIO
+  // 2. CITAS DEL USUARIO (con caché automática)
   // ===========================================================================
   Future<List<dynamic>> getCitas() async {
     final prefs = await SharedPreferences.getInstance();
@@ -69,11 +73,22 @@ class ApiService {
       final response = await http.get(url).timeout(_timeout);
 
       if (response.statusCode == 200) {
-        return jsonDecode(utf8.decode(response.bodyBytes));
+        final citas = jsonDecode(utf8.decode(response.bodyBytes));
+
+        // ✅ Guardar en caché local para uso offline vinculado a este usuario
+        await CacheService.cacheCitas(citas, userId: userId);
+        await CacheService.updateLastSync(userId: userId);
+
+        return citas;
       } else {
         throw Exception('Error al cargar citas: ${response.statusCode}');
       }
     } catch (e) {
+      // 🔄 Si falla la conexión, intentar devolver datos del caché de este usuario
+      final cachedCitas = await CacheService.getCachedCitas(userId: userId);
+      if (cachedCitas.isNotEmpty) {
+        return cachedCitas; // Devuelve los últimos datos conocidos del usuario
+      }
       throw Exception('Error de conexión al cargar citas: $e');
     }
   }
@@ -99,7 +114,7 @@ class ApiService {
   }
 
   // ===========================================================================
-  // 4. CHATBOT DE DANTE
+  // 4. CHATBOT DE DANTE (con caché del historial)
   // ===========================================================================
   Future<Map<String, dynamic>> enviarMensajeDante(
     String mensaje, {
@@ -137,7 +152,7 @@ class ApiService {
     } catch (e) {
       return {
         'success': false,
-        'respuesta': 'Error al comunicar con Dante: $e',
+        'respuesta': 'Sin conexión. Tu historial está guardado localmente y se mantendrá cuando vuelvas a conectarte.',
       };
     }
   }
@@ -148,7 +163,7 @@ class ApiService {
   }
 
   // ===========================================================================
-  // 5. EMBUDO PREDICTIVO (ADMINISTRADOR)
+  // 5. EMBUDO PREDICTIVO (ADMINISTRADOR) — con caché automática
   // ===========================================================================
   Future<Map<String, dynamic>> obtenerDatosEmbudo() async {
     final url = Uri.parse('$baseUrl/api/prediccion/embudo');
@@ -163,13 +178,19 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return {
+        final result = {
           'success': true,
           'total': data['total'] ?? 0,
           'conInteres': data['conInteres'] ?? 0,
           'citaAprobada': data['citaAprobada'] ?? 0,
           'clientePotencial': data['clientePotencial'] ?? 0,
         };
+
+        // ✅ Guardar en caché local para uso offline
+        await CacheService.cacheEmbudo(result);
+        await CacheService.updateLastSync();
+
+        return result;
       } else {
         return {
           'success': false,
@@ -177,9 +198,15 @@ class ApiService {
         };
       }
     } catch (e) {
+      // 🔄 Si falla la conexión, intentar devolver datos del caché
+      final cachedEmbudo = await CacheService.getCachedEmbudo();
+      if (cachedEmbudo != null) {
+        cachedEmbudo['fromCache'] = true; // Marca que viene del caché
+        return cachedEmbudo;
+      }
       return {
         'success': false,
-        'message': 'Error de conexión: $e',
+        'message': 'Sin conexión y sin datos guardados localmente.',
       };
     }
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:highcharts_flutter/highcharts.dart';
 import '../services/api_service.dart';
+import '../services/cache_service.dart';
 import '../widgets/power_bi_view.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -32,7 +34,10 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _cerrarSesion() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    // Limpiar únicamente las credenciales de la sesión activa
+    await prefs.remove('userId');
+    await prefs.remove('nombre');
+    await prefs.remove('role');
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
@@ -138,7 +143,9 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
   final ApiService _apiService = ApiService();
 
   bool _loading = true;
+  bool _isFromCache = false;
   String _error = '';
+  String? _cacheTimestamp;
   int _total = 0;
   int _conInteres = 0;
   int _citaAprobada = 0;
@@ -150,10 +157,21 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
     _fetchEmbudoData();
   }
 
+  String _formatSyncTime(String? isoTime) {
+    if (isoTime == null) return '';
+    try {
+      final dt = DateTime.parse(isoTime);
+      return DateFormat("d MMM, h:mm a").format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<void> _fetchEmbudoData() async {
     setState(() {
       _loading = true;
       _error = '';
+      _isFromCache = false;
     });
 
     final data = await _apiService.obtenerDatosEmbudo();
@@ -161,11 +179,14 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
     if (!mounted) return;
 
     if (data['success'] == true) {
+      final timestamp = await CacheService.getEmbudoCacheTimestamp();
       setState(() {
         _total = (data['total'] ?? 0) as int;
         _conInteres = (data['conInteres'] ?? 0) as int;
         _citaAprobada = (data['citaAprobada'] ?? 0) as int;
         _clientePotencial = (data['clientePotencial'] ?? 0) as int;
+        _isFromCache = data['fromCache'] == true;
+        _cacheTimestamp = timestamp;
         _loading = false;
       });
     } else {
@@ -224,6 +245,53 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
     return SingleChildScrollView(
       child: Column(
         children: [
+          // Banner de datos offline
+          if (_isFromCache)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.orange.shade800.withOpacity(0.9),
+                    Colors.orange.shade900.withOpacity(0.9),
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Datos guardados localmente',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (_cacheTimestamp != null)
+                          Text(
+                            'Última actualización: ${_formatSyncTime(_cacheTimestamp)}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                    onPressed: _fetchEmbudoData,
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
