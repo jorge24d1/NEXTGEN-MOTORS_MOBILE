@@ -8,6 +8,7 @@ import 'package:mobile_app/screens/login_screen.dart';
 import 'package:mobile_app/screens/home_screen.dart';
 import 'package:mobile_app/screens/splash_screen.dart';
 import 'package:mobile_app/screens/settings_screen.dart';
+import 'package:mobile_app/screens/welcome_screen.dart';
 import 'package:mobile_app/providers/locale_provider.dart';
 import 'package:mobile_app/l10n/app_localizations.dart';
 
@@ -71,6 +72,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => SplashScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => LoginScreen(),
         '/home': (context) => HomeScreen(),
         '/settings': (context) => const SettingsScreen(),

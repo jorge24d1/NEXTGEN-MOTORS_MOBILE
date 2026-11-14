@@ -57,9 +57,10 @@ class _SplashScreenState extends State<SplashScreen>
         await Firebase.initializeApp();
       }
 
-      // 2. Verificar Sesión
+      // 2. Verificar Sesión y primera vez (Onboarding)
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId');
+      final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
 
       // 3. Init Notificaciones si hay sesión
       if (userId != null) {
@@ -69,10 +70,15 @@ class _SplashScreenState extends State<SplashScreen>
           print('Aviso en notificaciones: $e');
         }
         targetRoute = '/home';
+      } else if (!hasSeenOnboarding) {
+        // Primera vez en la aplicación: mostrar pantalla promocional
+        targetRoute = '/welcome';
+      } else {
+        targetRoute = '/login';
       }
     } catch (e) {
       print('Aviso en Splash: $e');
-      targetRoute = '/login';
+      targetRoute = '/welcome';
     } finally {
       // Esperar siempre el tiempo mínimo para apreciar la animación
       await minDisplayTime;

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mobile_app/services/api_service.dart';
 import 'package:mobile_app/screens/home_screen.dart';
 import 'package:mobile_app/screens/admin_screen.dart';
@@ -503,6 +503,25 @@ class _LoginScreenState extends State<LoginScreen>
                                                   }),
                                       ),
                                     ],
+                                    const SizedBox(height: 10),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.pushNamed(context, '/welcome');
+                                      },
+                                      icon: const Icon(
+                                        Icons.info_outline_rounded,
+                                        size: 16,
+                                        color: Colors.white70,
+                                      ),
+                                      label: const Text(
+                                        'Conoce nuestras funciones',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
