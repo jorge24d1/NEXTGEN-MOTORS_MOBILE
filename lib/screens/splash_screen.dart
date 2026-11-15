@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Garantiza que la animación del logo sea visible durante al menos 2.5 segundos
     final minDisplayTime = Future.delayed(const Duration(milliseconds: 2500));
 
-    String targetRoute = '/login';
+    String targetRoute = '/welcome';
 
     try {
       // 1. Inicializar Firebase si aún no está inicializado
@@ -57,10 +57,9 @@ class _SplashScreenState extends State<SplashScreen>
         await Firebase.initializeApp();
       }
 
-      // 2. Verificar Sesión y primera vez (Onboarding)
+      // 2. Verificar Sesión
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId');
-      final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
 
       // 3. Init Notificaciones si hay sesión
       if (userId != null) {
@@ -70,11 +69,9 @@ class _SplashScreenState extends State<SplashScreen>
           print('Aviso en notificaciones: $e');
         }
         targetRoute = '/home';
-      } else if (!hasSeenOnboarding) {
-        // Primera vez en la aplicación: mostrar pantalla promocional
-        targetRoute = '/welcome';
       } else {
-        targetRoute = '/login';
+        // Flujo inicial: Splash -> Welcome
+        targetRoute = '/welcome';
       }
     } catch (e) {
       print('Aviso en Splash: $e');

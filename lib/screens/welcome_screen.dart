@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,69 +11,78 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
+  static const Duration _autoPlayDuration = Duration(seconds: 5);
+  static const Color _blue = Color(0xFF0075FF);
+  static const Color _deepNavyBg = Color(0xFF060913);
+
   final PageController _pageController = PageController();
+  Timer? _timer;
   int _currentPage = 0;
 
   final List<Map<String, dynamic>> _features = [
     {
-      'title': 'Gestión Integral de Citas',
-      'subtitle': 'Tu concesionario en la palma de tu mano',
+      'title': 'Gestión de citas',
+      'subtitle': 'Tu taller en la palma de tu mano',
       'description':
-          'Agenda tus revisiones mecánicas y servicios de mantenimiento en segundos. Consulta horarios disponibles, confirma tu cita y revisa el historial detallado de tu vehículo sin esperas.',
+          'Agenda revisiones y mantenimientos en segundos y consulta el historial de tu vehículo.',
+      'image': 'assets/images/onboarding_citas.png',
       'icon': Icons.calendar_month_rounded,
       'badge': 'Mantenimiento & Taller',
-      'accentColor': const Color(0xFF0075FF),
-      'bullets': [
-        'Reserva de citas técnica inmediata',
-        'Seguimiento del estado de tu vehículo',
-        'Historial completo de intervenciones',
-      ],
     },
     {
-      'title': 'Asistencia y Chat en Vivo',
-      'subtitle': 'Comunicación directa con expertos',
+      'title': 'Chat con Dante',
+      'subtitle': 'Tu asesor inteligente 24/7',
       'description':
-          '¿Tienes dudas sobre el diagnóstico o necesitas orientación mecánica? Conéctate mediante nuestro chat con asesores de taller y el asistente inteligente de NextGen Motors.',
+          'Resuelve dudas al instante con Dante, el asistente con IA de NextGen Motors, o con expertos del taller.',
+      'image': 'assets/images/onboarding_chat.png',
       'icon': Icons.support_agent_rounded,
-      'badge': 'Soporte Inteligente',
-      'accentColor': const Color(0xFF00C6FF),
-      'bullets': [
-        'Canal directo con jefes de taller',
-        'Respuestas automotrices en tiempo real',
-        'Interacción rápida y personalizada',
-      ],
+      'badge': 'Dante AI',
     },
     {
-      'title': 'Acceso Biométrico Seguro',
-      'subtitle': 'Seguridad avanzada y acceso express',
+      'title': 'Acceso biométrico',
+      'subtitle': 'Seguro y en un toque',
       'description':
-          'Ingresa a tu cuenta en un instante utilizando tu huella digital o reconocimiento facial. Máxima protección para tus datos personales y los registros de tus vehículos.',
+          'Ingresa con tu huella o rostro y mantén protegidos tus datos y los de tus vehículos.',
+      'image': 'assets/images/onboarding_biometria.png',
       'icon': Icons.fingerprint_rounded,
-      'badge': 'Seguridad de Última Generación',
-      'accentColor': const Color(0xFF00E676),
-      'bullets': [
-        'Desbloqueo biométrico instantáneo',
-        'Cifrado seguro de credenciales',
-        'Protección total de tu privacidad',
-      ],
+      'badge': 'Seguridad',
     },
     {
-      'title': 'Alertas y Notificaciones',
-      'subtitle': 'Siempre al tanto de lo que importa',
+      'title': 'Alertas al instante',
+      'subtitle': 'Siempre al tanto',
       'description':
-          'Recibe notificaciones automáticas cuando tu auto esté listo para recoger, cuando tu cita sea confirmada o reprogramada, y avisos de revisiones preventivas periódicas.',
+          'Te avisamos cuando tu auto esté listo, tu cita cambie o toque una revisión preventiva.',
+      'image': 'assets/images/onboarding_alertas.png',
       'icon': Icons.notifications_active_rounded,
-      'badge': 'Actualizaciones en Vivo',
-      'accentColor': const Color(0xFFFF9100),
-      'bullets': [
-        'Avisos de cambio de estado de tu servicio',
-        'Recordatorios de citas agendadas',
-        'Promociones exclusivas del concesionario',
-      ],
+      'badge': 'Actualizaciones en vivo',
     },
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _timer?.cancel();
+    _timer = Timer.periodic(_autoPlayDuration, (_) => _goToNext());
+  }
+
+  void _stopAutoPlay() => _timer?.cancel();
+
+  void _goToNext() {
+    if (!mounted || !_pageController.hasClients) return;
+    final current = _pageController.page?.round() ?? _currentPage;
+    _pageController.animateToPage(
+      current + 1,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _completeOnboarding() async {
+    _stopAutoPlay();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
 
@@ -81,396 +92,252 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color deepNavyBg = Color(0xFF060913);
-    const Color cardBg = Color(0xFF131826);
-
     return Scaffold(
-      backgroundColor: deepNavyBg,
-      body: Stack(
-        children: [
-          // Fondo decorativo con silueta de automóvil sutil
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 260,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.25,
-                child: ShaderMask(
-                  shaderCallback: (bounds) {
-                    return const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black],
-                      stops: [0.0, 0.5],
-                    ).createShader(bounds);
+      backgroundColor: _deepNavyBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildTopBar(),
+            Expanded(
+              child: Listener(
+                onPointerDown: (_) => _stopAutoPlay(),
+                onPointerUp: (_) => _startAutoPlay(),
+                onPointerCancel: (_) => _startAutoPlay(),
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index % _features.length);
+                    _startAutoPlay(); // reinicia el conteo de 5 s
                   },
-                  blendMode: BlendMode.dstIn,
-                  child: Image.asset(
-                    'assets/images/car_silhouette.jpg',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
+                  itemBuilder: (context, index) =>
+                      _buildPage(_features[index % _features.length]),
+                ),
+              ),
+            ),
+            _buildBottom(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: _blue.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _blue.withValues(alpha: 0.4)),
+            ),
+            child: Image.asset(
+              'assets/icon/app_icon.png',
+              width: 26,
+              height: 26,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.directions_car,
+                color: _blue,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'NEXTGEN MOTORS',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Tarjeta única: imagen de fondo + texto superpuesto sobre degradado.
+  Widget _buildPage(Map<String, dynamic> item) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Imagen
+            Image.asset(
+              item['image'] as String,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _blue.withValues(alpha: 0.35),
+                      const Color(0xFF131826),
+                    ],
+                  ),
+                ),
+                child: Align(
+                  alignment: const Alignment(0, -0.35),
+                  child: Icon(
+                    item['icon'] as IconData,
+                    size: 84,
+                    color: Colors.white38,
                   ),
                 ),
               ),
             ),
+
+            // Degradado que "funde" la imagen con el texto
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    _deepNavyBg.withValues(alpha: 0.55),
+                    _deepNavyBg.withValues(alpha: 0.95),
+                  ],
+                  stops: const [0.35, 0.65, 1.0],
+                ),
+              ),
+            ),
+
+            // Badge arriba
+            Positioned(top: 16, left: 16, child: _buildBadge(item)),
+
+            // Texto abajo, dentro de la misma tarjeta
+            Positioned(
+              left: 22,
+              right: 22,
+              bottom: 24,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['title'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item['subtitle'] as String,
+                    style: const TextStyle(
+                      color: Color(0xFF5AA2FF),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    item['description'] as String,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 14.5,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(Map<String, dynamic> item) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _deepNavyBg.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _blue.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(item['icon'] as IconData, size: 14, color: _blue),
+          const SizedBox(width: 6),
+          Text(
+            item['badge'] as String,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
+        ],
+      ),
+    );
+  }
 
-          SafeArea(
-            child: Column(
-              children: [
-                // Barra superior: Logo + Nombre + Botón Omitir
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 12.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0075FF).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFF0075FF).withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Image.asset(
-                          'assets/icon/app_icon.png',
-                          width: 26,
-                          height: 26,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.directions_car,
-                            color: Color(0xFF0075FF),
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'NEXTGEN MOTORS',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _completeOnboarding,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white70,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Omitir',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(Icons.arrow_forward_ios, size: 12),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+  Widget _buildBottom() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Puntos indicadores
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_features.length, (i) {
+              final active = i == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: active ? 24 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: active ? _blue : Colors.white24,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-
-                // Carrusel de Funcionalidades (PageView)
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _features.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentPage = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      final item = _features[index];
-                      final Color accentColor = item['accentColor'] as Color;
-                      final List<String> bullets =
-                          item['bullets'] as List<String>;
-
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24.0,
-                          vertical: 10.0,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 10),
-                            // Badge decorativo
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: accentColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: accentColor.withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    size: 14,
-                                    color: accentColor,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    item['badge'] as String,
-                                    style: TextStyle(
-                                      color: accentColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Ícono principal con resplandor
-                            Center(
-                              child: Container(
-                                width: 110,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: RadialGradient(
-                                    colors: [
-                                      accentColor.withValues(alpha: 0.25),
-                                      Colors.transparent,
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                    color: accentColor.withValues(alpha: 0.5),
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentColor.withValues(alpha: 0.25),
-                                      blurRadius: 24,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  item['icon'] as IconData,
-                                  size: 54,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Título y Subtítulo
-                            Text(
-                              item['title'] as String,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item['subtitle'] as String,
-                              style: TextStyle(
-                                color: accentColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // Descripción
-                            Text(
-                              item['description'] as String,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 14.5,
-                                height: 1.45,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Tarjeta con viñetas/beneficios
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: cardBg,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Column(
-                                children: bullets.map((bullet) {
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 4.0),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(
-                                          Icons.check_circle_rounded,
-                                          color: accentColor,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Text(
-                                            bullet,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+              );
+            }),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _completeOnboarding,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _blue,
+                foregroundColor: Colors.white,
+                elevation: 6,
+                shadowColor: _blue.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-
-                // Parte inferior: Indicador de puntos + Botón "Accede a nuestras funciones"
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 16.0,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Indicadores de páginas (Dots)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_features.length, (index) {
-                          final bool isSelected = _currentPage == index;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            height: 6,
-                            width: isSelected ? 28 : 8,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFF0075FF)
-                                  : Colors.white24,
-                              borderRadius: BorderRadius.circular(3),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFF0075FF)
-                                            .withValues(alpha: 0.5),
-                                        blurRadius: 8,
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Botón principal: "Accede a nuestras funciones"
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF0052D4),
-                                Color(0xFF0075FF),
-                                Color(0xFF00C6FF),
-                              ],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    const Color(0xFF0075FF).withValues(alpha: 0.4),
-                                blurRadius: 18,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _completeOnboarding,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Accede a nuestras funciones',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
+              ),
+              child: const Text(
+                'Iniciar sesión',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -478,4 +345,3 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 }
-
