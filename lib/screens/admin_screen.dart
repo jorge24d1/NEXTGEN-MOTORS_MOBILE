@@ -6,6 +6,21 @@ import '../services/api_service.dart';
 import '../services/cache_service.dart';
 import '../widgets/power_bi_view.dart';
 
+// ─────────────────────────────────────────────
+//  Paleta compartida
+// ─────────────────────────────────────────────
+class _C {
+  static const bg = Color(0xFF0F172A);
+  static const surface = Color(0xFF1E293B);
+  static const card = Color(0xFF161B22);
+  static const border = Color(0xFF30363D);
+  static const blue = Color(0xFF58A6FF);
+  static const green = Color(0xFF3FB950);
+  static const purple = Color(0xFFD2A8FF);
+  static const orange = Color(0xFFF78166);
+  static const textSoft = Colors.white60;
+}
+
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
 
@@ -18,6 +33,8 @@ class _AdminScreenState extends State<AdminScreen> {
   String _rol = "ADMINISTRADOR";
   int _currentIndex = 0;
 
+  static const _titulos = ['Reportes', 'Modelo predictivo'];
+
   @override
   void initState() {
     super.initState();
@@ -26,10 +43,33 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _nombre = prefs.getString('nombre') ?? "Admin";
       _rol = prefs.getString('role') ?? "ADMINISTRADOR";
     });
+  }
+
+  Future<void> _confirmarCerrarSesion() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _C.surface,
+        title: const Text('Cerrar sesión',
+            style: TextStyle(color: Colors.white)),
+        content: const Text('¿Seguro que deseas salir del panel?',
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Salir')),
+        ],
+      ),
+    );
+    if (ok == true) await _cerrarSesion();
   }
 
   Future<void> _cerrarSesion() async {
@@ -44,36 +84,52 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final inicial = _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'A';
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: _C.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: _C.surface,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: Row(
           children: [
-            const Text(
-              "Panel de Administración",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: _C.blue.withValues(alpha: 0.2),
+              child: Text(inicial,
+                  style: const TextStyle(
+                      color: _C.blue, fontWeight: FontWeight.bold)),
             ),
-            Text(
-              "$_nombre · $_rol",
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 12,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _titulos[_currentIndex],
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$_nombre · $_rol',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _C.textSoft, fontSize: 12),
+                  ),
+                ],
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white70),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white70),
             tooltip: "Cerrar sesión",
-            onPressed: _cerrarSesion,
+            onPressed: _confirmarCerrarSesion,
           ),
         ],
       ),
@@ -84,33 +140,42 @@ class _AdminScreenState extends State<AdminScreen> {
           _AdvancedChartsView(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF1E293B),
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.white54,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pie_chart),
-            label: "PowerBI",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
-            label: "Avanzados",
-          ),
-        ],
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          backgroundColor: _C.surface,
+          indicatorColor: _C.blue.withValues(alpha: 0.18),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              color: selected ? _C.blue : Colors.white54,
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined, color: Colors.white54),
+              selectedIcon: Icon(Icons.dashboard_rounded, color: _C.blue),
+              label: 'Power BI',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.filter_alt_outlined, color: Colors.white54),
+              selectedIcon: Icon(Icons.filter_alt_rounded, color: _C.blue),
+              label: 'Predicciones',
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────
-//  VISTA 1: Gráficos de PowerBI
+//  VISTA 1: Reportes (Power BI)
 // ─────────────────────────────────────────────
 const String _kPowerBiReportUrl =
     "https://app.powerbi.com/view?r=eyJrIjoiNTIyYjhkZGItYjVjOC00YjYwLWEyOWQtYTFkNGU2ZWI3MGNmIiwidCI6IjlkMTJiZjNmLWU0ZjYtNDdhYi05MTJmLTFhMmYwZmM0OGFhNCIsImMiOjR9";
@@ -130,7 +195,7 @@ class _PowerBIView extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  VISTA 2: Gráficos Avanzados (Highcharts Funnel)
+//  VISTA 2: Modelo predictivo (embudo)
 // ─────────────────────────────────────────────
 class _AdvancedChartsView extends StatefulWidget {
   const _AdvancedChartsView();
@@ -146,6 +211,7 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
   bool _isFromCache = false;
   String _error = '';
   String? _cacheTimestamp;
+  DateTime? _lastSync;
   int _total = 0;
   int _conInteres = 0;
   int _citaAprobada = 0;
@@ -160,12 +226,14 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
   String _formatSyncTime(String? isoTime) {
     if (isoTime == null) return '';
     try {
-      final dt = DateTime.parse(isoTime);
-      return DateFormat("d MMM, h:mm a").format(dt);
+      return DateFormat("d MMM, h:mm a").format(DateTime.parse(isoTime));
     } catch (_) {
       return '';
     }
   }
+
+  /// Porcentaje de [parte] sobre [base], seguro ante división por cero.
+  double _pct(int parte, int base) => base == 0 ? 0 : parte / base * 100;
 
   Future<void> _fetchEmbudoData() async {
     setState(() {
@@ -175,11 +243,11 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
     });
 
     final data = await _apiService.obtenerDatosEmbudo();
-
     if (!mounted) return;
 
     if (data['success'] == true) {
       final timestamp = await CacheService.getEmbudoCacheTimestamp();
+      if (!mounted) return;
       setState(() {
         _total = (data['total'] ?? 0) as int;
         _conInteres = (data['conInteres'] ?? 0) as int;
@@ -187,6 +255,7 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
         _clientePotencial = (data['clientePotencial'] ?? 0) as int;
         _isFromCache = data['fromCache'] == true;
         _cacheTimestamp = timestamp;
+        _lastSync = DateTime.now();
         _loading = false;
       });
     } else {
@@ -199,150 +268,133 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.blueAccent),
-            SizedBox(height: 16),
-            Text('Cargando modelo predictivo...', style: TextStyle(color: Colors.white70)),
-          ],
-        ),
-      );
-    }
-
+    if (_loading) return const _EstadoCargando();
     if (_error.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.redAccent),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _error,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _fetchEmbudoData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      );
+      return _EstadoError(mensaje: _error, onReintentar: _fetchEmbudoData);
     }
 
-    return SingleChildScrollView(
-      child: Column(
+    return RefreshIndicator(
+      color: _C.blue,
+      backgroundColor: _C.surface,
+      onRefresh: _fetchEmbudoData,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         children: [
-          // Banner de datos offline
-          if (_isFromCache)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.orange.shade800.withOpacity(0.9),
-                    Colors.orange.shade900.withOpacity(0.9),
-                  ],
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Datos guardados localmente',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        if (_cacheTimestamp != null)
-                          Text(
-                            'Última actualización: ${_formatSyncTime(_cacheTimestamp)}',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-                    onPressed: _fetchEmbudoData,
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Pipeline de $_total clientes — Modelo Predictivo (HTTP GET)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
+          _buildEncabezado(),
+          const SizedBox(height: 14),
+          _buildKpiGrid(),
+          const SizedBox(height: 14),
+          _buildFunnelCard(),
+          const SizedBox(height: 14),
+          _buildConversionCard(),
+        ],
+      ),
+    );
+  }
+
+  // ── Encabezado con estado de sincronización ──
+  Widget _buildEncabezado() {
+    final offline = _isFromCache;
+    final color = offline ? Colors.orange : _C.green;
+    final texto = offline
+        ? 'Sin conexión · ${_formatSyncTime(_cacheTimestamp)}'
+        : 'En línea · ${_lastSync != null ? DateFormat('h:mm a').format(_lastSync!) : ''}';
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Pipeline de $_total clientes',
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 10),
-          // Gráfico de Embudo con Highcharts
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12),
-            height: 380,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D1117),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF30363D)),
-            ),
-            clipBehavior: Clip.antiAlias,
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(offline ? Icons.wifi_off_rounded : Icons.circle,
+                  size: offline ? 13 : 8, color: color),
+              const SizedBox(width: 6),
+              Text(texto, style: TextStyle(color: color, fontSize: 11)),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Actualizar',
+          icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+          onPressed: _fetchEmbudoData,
+        ),
+      ],
+    );
+  }
+
+  // ── KPIs 2x2 con % de conversión ──
+  Widget _buildKpiGrid() {
+    final kpis = [
+      _Kpi('Total clientes', _total, Icons.groups_rounded, _C.blue,
+          'Base del pipeline'),
+      _Kpi('Con interés', _conInteres, Icons.directions_car_rounded, _C.green,
+          '${_pct(_conInteres, _total).toStringAsFixed(0)}% del total'),
+      _Kpi('Cita aprobada', _citaAprobada, Icons.event_available_rounded,
+          _C.purple,
+          '${_pct(_citaAprobada, _conInteres).toStringAsFixed(0)}% de interesados'),
+      _Kpi('Potenciales', _clientePotencial, Icons.star_rounded, _C.orange,
+          '${_pct(_clientePotencial, _citaAprobada).toStringAsFixed(0)}% de aprobadas'),
+    ];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.7,
+      children: kpis.map((k) => _KpiCard(kpi: k)).toList(),
+    );
+  }
+
+  // ── Embudo Highcharts dentro de una tarjeta ──
+  Widget _buildFunnelCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1117),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Text('Embudo de clientes',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+            child: Text('Fuente: Modelo Predictivo NEXTGEN MOTORS',
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5), fontSize: 11)),
+          ),
+          SizedBox(
+            height: 320,
             child: HighchartsChart(
               HighchartsOptions(
-                title: HighchartsTitleOptions(
-                  text: 'Pipeline de Clientes',
-                  style: HighchartsTitleStyleOptions(
-                    color: '#E6EDF3',
-                    fontWeight: 'bold',
-                  ),
-                ),
-                subtitle: HighchartsSubtitleOptions(
-                  text: 'Fuente: Modelo Predictivo NEXTGEN MOTORS · $_total registros',
-                  style: HighchartsSubtitleStyleOptions(
-                    color: '#8B949E',
-                    fontSize: '11px',
-                  ),
-                ),
-                chart: HighchartsChartOptions(
-                  backgroundColor: '#0D1117',
-                ),
-                legend: HighchartsLegendOptions(
-                  enabled: true,
-                  itemStyle: {
-                    'color': '#C9D1D9',
-                    'fontSize': '12px',
-                    'fontWeight': 'normal',
-                  },
-                ),
+                chart: HighchartsChartOptions(backgroundColor: '#0D1117'),
+                legend: HighchartsLegendOptions(enabled: false),
                 tooltip: HighchartsTooltipOptions(
                   backgroundColor: '#161B22',
                   borderColor: '#30363D',
@@ -384,109 +436,183 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          // Tarjetas métricas horizontales
-          _buildSummaryCards(),
-          const SizedBox(height: 12),
-          // Botón actualizar datos
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _fetchEmbudoData,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Actualizar datos del modelo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF238636),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
-    final tarjetas = [
-      _Metrica('Total', _total, '👥', const Color(0xFF58A6FF)),
-      _Metrica('Interés', _conInteres, '🚗', const Color(0xFF3FB950)),
-      _Metrica('Aprobadas', _citaAprobada, '✅', const Color(0xFFD2A8FF)),
-      _Metrica('Potenciales', _clientePotencial, '⭐', const Color(0xFFF78166)),
+  // ── Conversión entre etapas con barras de progreso ──
+  Widget _buildConversionCard() {
+    final pasos = [
+      _Paso('Interés sobre total', _pct(_conInteres, _total), _C.green),
+      _Paso('Aprobadas sobre interés', _pct(_citaAprobada, _conInteres),
+          _C.purple),
+      _Paso('Potenciales sobre aprobadas',
+          _pct(_clientePotencial, _citaAprobada), _C.orange),
+      _Paso('Conversión global', _pct(_clientePotencial, _total), _C.blue),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Row(
-        children: tarjetas.map((m) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: _TarjetaMetrica(metrica: m),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Conversión entre etapas',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 14),
+          for (final p in pasos) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(p.etiqueta,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13)),
+                ),
+                Text('${p.valor.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                        color: p.color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+              ],
             ),
-          );
-        }).toList(),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: (p.valor / 100).clamp(0.0, 1.0),
+                minHeight: 7,
+                backgroundColor: Colors.white10,
+                valueColor: AlwaysStoppedAnimation(p.color),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+        ],
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────
-//  Modelos internos para métricas
+//  Modelos y widgets auxiliares
 // ─────────────────────────────────────────────
-class _Metrica {
+class _Kpi {
   final String etiqueta;
   final int valor;
-  final String emoji;
+  final IconData icono;
   final Color color;
-
-  const _Metrica(this.etiqueta, this.valor, this.emoji, this.color);
+  final String detalle;
+  const _Kpi(this.etiqueta, this.valor, this.icono, this.color, this.detalle);
 }
 
-// ─────────────────────────────────────────────
-//  Widget reutilizable: Tarjeta de métrica compacta
-// ─────────────────────────────────────────────
-class _TarjetaMetrica extends StatelessWidget {
-  const _TarjetaMetrica({required this.metrica});
-  final _Metrica metrica;
+class _Paso {
+  final String etiqueta;
+  final double valor;
+  final Color color;
+  const _Paso(this.etiqueta, this.valor, this.color);
+}
+
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({required this.kpi});
+  final _Kpi kpi;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF30363D)),
+        color: _C.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _C.border),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(metrica.emoji, style: const TextStyle(fontSize: 18)),
-          const SizedBox(height: 4),
-          Text(
-            '${metrica.valor}',
-            style: TextStyle(
-              color: metrica.color,
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: kpi.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(kpi.icono, size: 16, color: kpi.color),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(kpi.etiqueta,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white60, fontSize: 12)),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            metrica.etiqueta,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 10,
-            ),
+          Text('${kpi.valor}',
+              style: TextStyle(
+                  color: kpi.color,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold)),
+          Text(kpi.detalle,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
+
+class _EstadoCargando extends StatelessWidget {
+  const _EstadoCargando();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: _C.blue),
+          SizedBox(height: 16),
+          Text('Cargando modelo predictivo...',
+              style: TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+
+class _EstadoError extends StatelessWidget {
+  const _EstadoError({required this.mensaje, required this.onReintentar});
+  final String mensaje;
+  final VoidCallback onReintentar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.redAccent),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(mensaje,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70)),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onReintentar,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
           ),
         ],
       ),
