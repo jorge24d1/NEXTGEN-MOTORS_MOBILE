@@ -202,7 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: const Color(0xFF2196F3).withOpacity(0.15),
+              color: const Color(0xFF2196F3).withValues(alpha: 0.15),
               child: Row(
                 children: [
                   const Icon(Icons.history, color: Color(0xFF2196F3), size: 16),
@@ -275,7 +275,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 boxShadow: [
                                   if (!isUser)
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
+                                      color: Colors.black.withValues(alpha: 0.15),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -444,7 +444,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2196F3).withOpacity(0.15),
+                    backgroundColor: const Color(0xFF2196F3).withValues(alpha: 0.15),
                     foregroundColor: const Color(0xFF2196F3),
                     elevation: 0,
                   ),
