@@ -19,8 +19,7 @@ class BiometricService {
       final bool canAuthenticate =
           canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
       return canAuthenticate;
-    } catch (e) {
-      print('Error checking biometric availability: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -35,8 +34,7 @@ class BiometricService {
           biometricOnly: true,
         ),
       );
-    } catch (e) {
-      print('Error during authentication: $e');
+    } catch (_) {
       return false;
     }
   }

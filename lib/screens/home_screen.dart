@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/api_service.dart';
-import 'package:mobile_app/services/cache_service.dart';
+import 'package:mobile_app/services/sesion_movil.dart';
 import 'package:mobile_app/screens/chat_screen.dart';
 import 'package:mobile_app/screens/appointment_details_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_app/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final SesionMovil sesion;
+  final VoidCallback salir;
+  final ApiService? api;
+  const HomeScreen({required this.sesion, required this.salir, this.api, super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _apiService = ApiService();
+  late final _apiService = widget.api ?? ApiService();
   List<dynamic> _citas = [];
   bool _isLoading = true;
   bool _isOffline = false; // Indica si los datos vienen del caché
-  String _nombreUsuario = "Usuario";
+  String get _nombreUsuario => widget.sesion.nombre;
   String? _lastSyncTime;
 
   @override
@@ -50,47 +52,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _cargarCitas() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final nombreGuardado = prefs.getString('nombre') ?? "Usuario";
-
-      // Intentar cargar desde API (getCitas() ahora devuelve caché si falla)
-      final citas = await _apiService.getCitas();
-
-      // Obtener fecha de la última sincronización
-      final timestamp = await CacheService.getCitasCacheTimestamp();
-
+      final resultado = await _apiService.getCitas(widget.sesion);
       if (!mounted) return;
       setState(() {
-        _nombreUsuario = nombreGuardado;
-        _citas = citas;
+        _citas = resultado.citas;
         _isLoading = false;
-        _isOffline = false;
-        _lastSyncTime = timestamp;
+        _isOffline = resultado.desdeCache;
+        _lastSyncTime = resultado.actualizado;
       });
-    } catch (e) {
-      // Si falla completamente, cargar desde caché directamente
-      final cachedCitas = await CacheService.getCachedCitas();
-      final prefs = await SharedPreferences.getInstance();
-      final nombreGuardado = prefs.getString('nombre') ?? "Usuario";
-      final timestamp = await CacheService.getCitasCacheTimestamp();
-
-      if (!mounted) return;
-      setState(() {
-        _nombreUsuario = nombreGuardado;
-        _citas = cachedCitas;
-        _isLoading = false;
-        _isOffline = true;
-        _lastSyncTime = timestamp;
-      });
-
-      if (cachedCitas.isEmpty && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sin conexión y sin datos guardados'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+      if (_isOffline && _lastSyncTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sin conexión y sin datos guardados')));
       }
+    } on AccesoDenegado {
+      if (mounted) widget.salir();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _citas = []; _isLoading = false; _isOffline = false; });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudieron cargar las citas')));
     }
   }
 
@@ -146,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ChatScreen()),
+            MaterialPageRoute(builder: (context) => ChatScreen(userId: widget.sesion.userId)),
           );
         },
         label: const Text('Asistente Dante'),
@@ -222,20 +200,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white70),
-          onPressed: _cerrarSesion,
+          onPressed: widget.salir,
         ),
       ],
     );
-  }
-
-  Future<void> _cerrarSesion() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Limpiar únicamente las credenciales de sesión activa
-    await prefs.remove('userId');
-    await prefs.remove('nombre');
-    await prefs.remove('role');
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   Widget _buildWelcomeHeader() {

@@ -1,16 +1,19 @@
-# mobile_app
+# NextGen Motors móvil
 
-A new Flutter project.
+Cliente Flutter del concesionario. Los clientes consultan citas y conversan con Dante. El personal accede al embudo y a los informes.
 
-## Getting Started
+## Sesión y uso sin conexión
 
-This project is a starting point for a Flutter application.
+El login valida las credenciales con el backend y guarda una sesión de ocho horas en el almacén seguro del dispositivo. Al reabrir la app se comprueba el perfil con el servidor. Si falla la conexión, se puede consultar la caché de la cuenta mientras la credencial local esté vigente. Una respuesta 401 o 403 obliga a volver a entrar. Una instalación anterior que solo guardó el identificador del usuario también requiere un nuevo login.
 
-A few resources to get you started if this is your first Flutter project:
+El cierre borra la credencial del dispositivo y solicita su revocación en el servidor. Si el dispositivo está sin red, la credencial remota caduca en su plazo original. Las notificaciones son opcionales. Las citas guardadas muestran un aviso de modo sin conexión y la fecha de su última actualización.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Terminal de Android
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Desde PowerShell en esta carpeta, ejecuta `.\ejecutar-android.cmd`. Si tienes varios dispositivos, usa `.\ejecutar-android.cmd -d ID` con el identificador que muestra `flutter devices`. El lanzador filtra mensajes rutinarios del emulador, el teclado y las superficies de Android. Mantiene los avisos, los errores y la salida de Flutter. Para consultar la salida completa, usa `flutter run`.
+
+En modo debug, busca `[Notificaciones]` para ver el resultado del registro del teléfono y la recepción de mensajes en primer plano.
+
+## Verificación local
+
+Con el SDK Flutter del proyecto y las dependencias ya instaladas, ejecuta `flutter analyze --no-pub` y `flutter test --no-pub`. Las pruebas usan almacenamiento simulado y respuestas HTTP locales.

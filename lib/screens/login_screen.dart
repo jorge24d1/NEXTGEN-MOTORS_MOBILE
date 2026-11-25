@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/api_service.dart';
-import 'package:mobile_app/screens/home_screen.dart';
-import 'package:mobile_app/screens/admin_screen.dart';
-import 'package:mobile_app/services/notification_service.dart';
+import 'panel_movil.dart';
+import '../services/sesion_movil.dart';
 import 'package:mobile_app/services/biometric_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final ApiService? api;
+  const LoginScreen({this.api, super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _apiService = ApiService();
+  late final _apiService = widget.api ?? ApiService();
   final _biometricService = BiometricService();
   bool _isLoading = false;
   bool _canCheckBiometrics = false;
@@ -158,45 +158,32 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _isLoading = true);
     try {
-      final response = await _apiService.login(
+      final sesion = await _apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (!mounted) return;
 
-      if (response['success'] == true) {
-        if (!fromBiometric && _canCheckBiometrics) {
-          await _biometricService.enableBiometricLogin(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
+      if (!fromBiometric && _canCheckBiometrics) {
+        try {
+          await _biometricService.enableBiometricLogin(_emailController.text.trim(), _passwordController.text);
+        } catch (_) {
+          // El acceso ya se validó aunque el dispositivo no pueda guardar la biometría.
         }
-        await NotificationService().initNotifications();
-        if (!mounted) return;
-        if (response['role'] == 'ADMINISTRADOR' || response['role'] == 'TRABAJADOR') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminScreen()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response['message'] ?? 'Credenciales inválidas'),
-          ),
-        );
       }
-    } catch (e) {
+      if (mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PanelMovil(sesion)));
+      }
+    } on AccesoDenegado {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Credenciales inválidas')));
+    } on FalloLogin catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensaje)));
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Error de conexión: Verifica tu servidor'),
+          content: Text('No se pudo completar el inicio de sesión.'),
         ),
       );
     } finally {

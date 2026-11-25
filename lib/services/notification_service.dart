@@ -1,14 +1,39 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'sesion_movil.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mobile_app/services/api_service.dart';
 
+@pragma('vm:entry-point')
+Future<void> _mensajeEnSegundoPlano(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
+
 class NotificationService {
+  static StreamSubscription<RemoteMessage>? _enPrimerPlano;
+
+  static void _informar(String mensaje) {
+    if (kDebugMode) debugPrint('[Notificaciones] $mensaje');
+  }
+
+  static Future<void> activar(SesionMovil sesion) async {
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(_mensajeEnSegundoPlano);
+      await NotificationService()._initNotifications(sesion);
+    } catch (error) {
+      _informar('No se pudieron activar las notificaciones (${error.runtimeType}).');
+    }
+  }
+
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final ApiService _apiService = ApiService();
 
-  Future<void> initNotifications() async {
+  Future<void> _initNotifications(SesionMovil sesion) async {
     // 0. Configurar Notificaciones Locales
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -42,11 +67,8 @@ class NotificationService {
 
     if (androidImplementation != null) {
       await androidImplementation.createNotificationChannel(channel);
-    } else {
-      print('ℹ️ No se pudo obtener implementación Android (¿estás en iOS?)');
     }
 
-    // 1. Pedir permiso (Firebase)
     // 1. Pedir permiso (Firebase)
     NotificationSettings settings = await _firebaseMessaging.requestPermission(
       alert: true,
@@ -55,21 +77,19 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('🔔 Permiso de notificaciones concedido');
 
       // 2. Obtener Token
       final token = await _firebaseMessaging.getToken();
-      if (token != null) {
-        // Enviar al backend
-        await _apiService.sendFcmToken(token);
+      if (token == null) {
+        _informar('Firebase aún no ha asignado un token al dispositivo.');
+      } else if (sesion.esCliente && sesion.vigente) {
+        await _apiService.sendFcmToken(sesion, token);
+        _informar('Dispositivo registrado en el servidor.');
       }
 
       // 3. Escuchar en primer plano
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print(
-          '📩 Notificación recibida en primer plano: ${message.notification?.title}',
-        );
-
+      _enPrimerPlano ??= FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _informar('Mensaje recibido en primer plano.');
         // Mostrar notificación local
         RemoteNotification? notification = message.notification;
         AndroidNotification? android = message.notification?.android;
@@ -93,7 +113,7 @@ class NotificationService {
         }
       });
     } else {
-      print('🔕 Permiso de notificaciones denegado');
+      _informar('Permiso del dispositivo: ${settings.authorizationStatus.name}.');
     }
   }
 }

@@ -2,33 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:mobile_app/screens/login_screen.dart';
-import 'package:mobile_app/screens/home_screen.dart';
 import 'package:mobile_app/screens/splash_screen.dart';
 import 'package:mobile_app/screens/settings_screen.dart';
 import 'package:mobile_app/screens/welcome_screen.dart';
 import 'package:mobile_app/providers/locale_provider.dart';
 import 'package:mobile_app/l10n/app_localizations.dart';
 
-// Handler para notificaciones en segundo plano (debe ser top-level)
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print('📩 Notificación Background: ${message.messageId}');
-}
-
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp();
-    // Registrar el handler de background
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    print('⚠️ Error inicializando Firebase: $e');
-  }
-
   runApp(
     ChangeNotifierProvider(
       create: (_) => LocaleProvider(),
@@ -74,7 +56,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => SplashScreen(),
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => const SplashScreen(),
         '/settings': (context) => const SettingsScreen(),
       },
     );

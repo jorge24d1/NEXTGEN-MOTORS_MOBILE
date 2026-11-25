@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:mobile_app/services/notification_service.dart';
+import '../services/api_service.dart';
+import '../services/sesion_movil.dart';
+import 'panel_movil.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
@@ -49,40 +50,24 @@ class _SplashScreenState extends State<SplashScreen>
     // Garantiza que la animación del logo sea visible durante al menos 2.5 segundos
     final minDisplayTime = Future.delayed(const Duration(milliseconds: 2500));
 
-    String targetRoute = '/welcome';
-
+    SesionMovil? sesion;
+    String targetRoute = '/login';
     try {
-      // 1. Inicializar Firebase si aún no está inicializado
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-
-      // 2. Verificar Sesión
+      sesion = await ApiService().restaurar();
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('userId');
-
-      // 3. Init Notificaciones si hay sesión
-      if (userId != null) {
-        try {
-          await NotificationService().initNotifications();
-        } catch (e) {
-          print('Aviso en notificaciones: $e');
-        }
-        targetRoute = '/home';
-      } else {
-        // Flujo inicial: Splash -> Welcome
+      if (!prefs.containsKey('userId')) {
         targetRoute = '/welcome';
       }
-    } catch (e) {
-      print('Aviso en Splash: $e');
-      targetRoute = '/welcome';
-    } finally {
-      // Esperar siempre el tiempo mínimo para apreciar la animación
-      await minDisplayTime;
-
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, targetRoute);
-      }
+    } catch (_) {
+      targetRoute = '/login';
+    }
+    await minDisplayTime;
+    if (!mounted) return;
+    final activa = sesion;
+    if (activa != null && activa.vigente) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PanelMovil(activa)));
+    } else {
+      Navigator.pushReplacementNamed(context, targetRoute);
     }
   }
 

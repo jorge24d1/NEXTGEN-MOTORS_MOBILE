@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/sesion_movil.dart';
 import 'package:highcharts_flutter/highcharts.dart';
 import '../services/api_service.dart';
 import '../services/cache_service.dart';
@@ -22,33 +22,18 @@ class _C {
 }
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  final SesionMovil sesion;
+  final VoidCallback salir;
+  const AdminScreen({required this.sesion, required this.salir, super.key});
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  String _nombre = "Admin";
-  String _rol = "ADMINISTRADOR";
   int _currentIndex = 0;
 
   static const _titulos = ['Reportes', 'Modelo predictivo'];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _nombre = prefs.getString('nombre') ?? "Admin";
-      _rol = prefs.getString('role') ?? "ADMINISTRADOR";
-    });
-  }
 
   Future<void> _confirmarCerrarSesion() async {
     final ok = await showDialog<bool>(
@@ -69,22 +54,13 @@ class _AdminScreenState extends State<AdminScreen> {
         ],
       ),
     );
-    if (ok == true) await _cerrarSesion();
-  }
-
-  Future<void> _cerrarSesion() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Limpiar únicamente las credenciales de la sesión activa
-    await prefs.remove('userId');
-    await prefs.remove('nombre');
-    await prefs.remove('role');
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    if (ok == true && mounted) widget.salir();
   }
 
   @override
   Widget build(BuildContext context) {
-    final inicial = _nombre.isNotEmpty ? _nombre[0].toUpperCase() : 'A';
+    final nombre = widget.sesion.nombre;
+    final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : 'A';
 
     return Scaffold(
       backgroundColor: _C.bg,
@@ -116,7 +92,7 @@ class _AdminScreenState extends State<AdminScreen> {
                         fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '$_nombre · $_rol',
+                    '$nombre · ${widget.sesion.role}',
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: _C.textSoft, fontSize: 12),
                   ),
@@ -135,9 +111,9 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          _PowerBIView(),
-          _AdvancedChartsView(),
+        children: [
+          const _PowerBIView(),
+          _AdvancedChartsView(widget.sesion, widget.salir),
         ],
       ),
       bottomNavigationBar: NavigationBarTheme(
@@ -198,7 +174,9 @@ class _PowerBIView extends StatelessWidget {
 //  VISTA 2: Modelo predictivo (embudo)
 // ─────────────────────────────────────────────
 class _AdvancedChartsView extends StatefulWidget {
-  const _AdvancedChartsView();
+  final SesionMovil sesion;
+  final VoidCallback salir;
+  const _AdvancedChartsView(this.sesion, this.salir);
 
   @override
   State<_AdvancedChartsView> createState() => _AdvancedChartsViewState();
@@ -242,11 +220,21 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
       _isFromCache = false;
     });
 
-    final data = await _apiService.obtenerDatosEmbudo();
+    late final Map<String, dynamic> data;
+    try {
+      data = await _apiService.obtenerDatosEmbudo(widget.sesion);
+    } on AccesoDenegado {
+      if (mounted) widget.salir();
+      return;
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = 'Error al consultar el embudo'; });
+      return;
+    }
+
     if (!mounted) return;
 
     if (data['success'] == true) {
-      final timestamp = await CacheService.getEmbudoCacheTimestamp();
+      final timestamp = await CacheService.getEmbudoCacheTimestamp(userId: widget.sesion.userId);
       if (!mounted) return;
       setState(() {
         _total = (data['total'] ?? 0) as int;

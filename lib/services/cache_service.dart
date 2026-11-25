@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'sesion_movil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Servicio centralizado de caché local aislado por usuario.
@@ -15,8 +16,9 @@ class CacheService {
   /// Resuelve el userId activo si no se pasa uno explícito
   static Future<String> _resolveUserId([String? userId]) async {
     if (userId != null && userId.trim().isNotEmpty) return userId.trim();
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('userId') ?? 'global';
+    final sesion = await AlmacenSesion().leer();
+    if (sesion == null) throw const AccesoDenegado();
+    return sesion.userId;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -38,10 +40,8 @@ class CacheService {
   static Future<List<dynamic>> getCachedCitas({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    // Intento con clave por usuario
-    String? raw = prefs.getString('${_citasPrefix}_$uid');
-    // Fallback hacia clave legacy sin prefijo por compatibilidad
-    raw ??= prefs.getString(_citasPrefix);
+
+    final raw = prefs.getString('${_citasPrefix}_$uid');
 
     if (raw == null) return [];
     try {
@@ -55,15 +55,14 @@ class CacheService {
   static Future<String?> getCitasCacheTimestamp({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('${_citasPrefix}_${uid}_timestamp') ??
-        prefs.getString('${_citasPrefix}_timestamp');
+    return prefs.getString('${_citasPrefix}_${uid}_timestamp');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  EMBUDO PREDICTIVO (ADMIN)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Guarda los datos del embudo predictivo en caché local
+
   static Future<void> cacheEmbudo(Map<String, dynamic> data, {String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
@@ -78,8 +77,7 @@ class CacheService {
   static Future<Map<String, dynamic>?> getCachedEmbudo({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    String? raw = prefs.getString('${_embudoPrefix}_$uid');
-    raw ??= prefs.getString(_embudoPrefix);
+    final raw = prefs.getString('${_embudoPrefix}_$uid');
 
     if (raw == null) return null;
     try {
@@ -93,8 +91,7 @@ class CacheService {
   static Future<String?> getEmbudoCacheTimestamp({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('${_embudoPrefix}_${uid}_timestamp') ??
-        prefs.getString('${_embudoPrefix}_timestamp');
+    return prefs.getString('${_embudoPrefix}_${uid}_timestamp');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -113,8 +110,7 @@ class CacheService {
   static Future<List<Map<String, dynamic>>> getCachedChatHistory({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    String? raw = prefs.getString('${_chatHistoryPrefix}_$uid');
-    raw ??= prefs.getString(_chatHistoryPrefix);
+    final raw = prefs.getString('${_chatHistoryPrefix}_$uid');
 
     if (raw == null) return [];
     try {
@@ -141,17 +137,16 @@ class CacheService {
 
   /// Verifica si hay una sesión activa guardada localmente
   static Future<bool> hasActiveSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('userId') != null;
+    return await AlmacenSesion().leer() != null;
   }
 
   /// Obtiene los datos de sesión guardados localmente
   static Future<Map<String, String?>> getSessionData() async {
-    final prefs = await SharedPreferences.getInstance();
+    final sesion = await AlmacenSesion().leer();
     return {
-      'userId': prefs.getString('userId'),
-      'nombre': prefs.getString('nombre'),
-      'role': prefs.getString('role'),
+      'userId': sesion?.userId,
+      'nombre': sesion?.nombre,
+      'role': sesion?.role,
     };
   }
 
@@ -170,8 +165,7 @@ class CacheService {
   static Future<String?> getLastSync({String? userId}) async {
     final uid = await _resolveUserId(userId);
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('${_lastSyncPrefix}_$uid') ??
-        prefs.getString(_lastSyncPrefix);
+    return prefs.getString('${_lastSyncPrefix}_$uid');
   }
 
   /// Limpia la caché específica de un usuario (o del usuario actual)

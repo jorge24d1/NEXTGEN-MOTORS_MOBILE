@@ -3,10 +3,11 @@ import 'package:mobile_app/services/api_service.dart';
 import 'package:mobile_app/services/cache_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String userId;
+  const ChatScreen({required this.userId, super.key});
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -25,7 +26,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// Carga el historial guardado del caché al iniciar
   Future<void> _loadCachedHistory() async {
-    final cached = await CacheService.getCachedChatHistory();
+    final cached = await CacheService.getCachedChatHistory(userId: widget.userId);
+    if (!mounted) return;
     if (cached.isNotEmpty) {
       setState(() {
         _messages.addAll(cached);
@@ -74,12 +76,12 @@ class _ChatScreenState extends State<ChatScreen> {
         if (m['vehicle'] != null) 'vehicle': m['vehicle'],
       };
     }).toList();
-    await CacheService.cacheChatHistory(toCache);
+    await CacheService.cacheChatHistory(toCache, userId: widget.userId);
   }
 
   /// Limpia el historial y empieza una nueva conversación
   Future<void> _clearHistory() async {
-    await CacheService.clearChatHistory();
+    await CacheService.clearChatHistory(userId: widget.userId);
     setState(() {
       _messages.clear();
       _restoredFromCache = false;
@@ -111,6 +113,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       // 2. Enviamos el mensaje con historial a Dante
       final response = await _apiService.enviarMensajeDante(text, historial: historial);
+      if (!mounted) return;
 
       if (response['success'] == true) {
         final botReply = response['respuesta'] ??

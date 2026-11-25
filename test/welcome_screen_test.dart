@@ -7,15 +7,16 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: WelcomeScreen()));
+    final controller = tester.widget<PageView>(find.byType(PageView)).controller!;
 
-    expect(find.text('Gestión Integral de Citas'), findsOneWidget);
+    expect(controller.page, 0);
 
     await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Gestión Integral de Citas'), findsOneWidget);
+    expect(controller.page, 0);
 
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('Asistencia y Chat en Vivo'), findsOneWidget);
+    expect(controller.page, 1);
   });
 }
