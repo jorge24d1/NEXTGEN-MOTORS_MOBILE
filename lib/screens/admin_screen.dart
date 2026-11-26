@@ -40,17 +40,23 @@ class _AdminScreenState extends State<AdminScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _C.surface,
-        title: const Text('Cerrar sesión',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('¿Seguro que deseas salir del panel?',
-            style: TextStyle(color: Colors.white70)),
+        title: const Text(
+          'Cerrar sesión',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          '¿Seguro que deseas salir del panel?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salir')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Salir'),
+          ),
         ],
       ),
     );
@@ -74,9 +80,13 @@ class _AdminScreenState extends State<AdminScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: _C.blue.withValues(alpha: 0.2),
-              child: Text(inicial,
-                  style: const TextStyle(
-                      color: _C.blue, fontWeight: FontWeight.bold)),
+              child: Text(
+                inicial,
+                style: const TextStyle(
+                  color: _C.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -87,9 +97,10 @@ class _AdminScreenState extends State<AdminScreen> {
                   Text(
                     _titulos[_currentIndex],
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     '$nombre · ${widget.sesion.role}',
@@ -154,7 +165,7 @@ class _AdminScreenState extends State<AdminScreen> {
 //  VISTA 1: Reportes (Power BI)
 // ─────────────────────────────────────────────
 const String _kPowerBiReportUrl =
-    "https://app.powerbi.com/view?r=eyJrIjoiNTIyYjhkZGItYjVjOC00YjYwLWEyOWQtYTFkNGU2ZWI3MGNmIiwidCI6IjlkMTJiZjNmLWU0ZjYtNDdhYi05MTJmLTFhMmYwZmM0OGFhNCIsImMiOjR9";
+    "https://app.powerbi.com/view?r=eyJrIjoiYzJiN2RmMDQtYjYxNi00YmJiLWE5NDQtZmNjYzg4NzBkNjE3IiwidCI6IjlkMTJiZjNmLWU0ZjYtNDdhYi05MTJmLTFhMmYwZmM0OGFhNCIsImMiOjR9";
 
 class _PowerBIView extends StatelessWidget {
   const _PowerBIView();
@@ -162,10 +173,7 @@ class _PowerBIView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox.expand(
-      child: PowerBiView(
-        url: _kPowerBiReportUrl,
-        alturaBarra: 56.0,
-      ),
+      child: PowerBiView(url: _kPowerBiReportUrl, alturaBarra: 56.0),
     );
   }
 }
@@ -227,14 +235,21 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
       if (mounted) widget.salir();
       return;
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _error = 'Error al consultar el embudo'; });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Error al consultar el embudo';
+        });
+      }
       return;
     }
 
     if (!mounted) return;
 
     if (data['success'] == true) {
-      final timestamp = await CacheService.getEmbudoCacheTimestamp(userId: widget.sesion.userId);
+      final timestamp = await CacheService.getEmbudoCacheTimestamp(
+        userId: widget.sesion.userId,
+      );
       if (!mounted) return;
       setState(() {
         _total = (data['total'] ?? 0) as int;
@@ -295,9 +310,10 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
           child: Text(
             'Pipeline de $_total clientes',
             style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600),
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         Container(
@@ -310,8 +326,11 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(offline ? Icons.wifi_off_rounded : Icons.circle,
-                  size: offline ? 13 : 8, color: color),
+              Icon(
+                offline ? Icons.wifi_off_rounded : Icons.circle,
+                size: offline ? 13 : 8,
+                color: color,
+              ),
               const SizedBox(width: 6),
               Text(texto, style: TextStyle(color: color, fontSize: 11)),
             ],
@@ -329,15 +348,34 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
   // ── KPIs 2x2 con % de conversión ──
   Widget _buildKpiGrid() {
     final kpis = [
-      _Kpi('Total clientes', _total, Icons.groups_rounded, _C.blue,
-          'Base del pipeline'),
-      _Kpi('Con interés', _conInteres, Icons.directions_car_rounded, _C.green,
-          '${_pct(_conInteres, _total).toStringAsFixed(0)}% del total'),
-      _Kpi('Cita aprobada', _citaAprobada, Icons.event_available_rounded,
-          _C.purple,
-          '${_pct(_citaAprobada, _conInteres).toStringAsFixed(0)}% de interesados'),
-      _Kpi('Potenciales', _clientePotencial, Icons.star_rounded, _C.orange,
-          '${_pct(_clientePotencial, _citaAprobada).toStringAsFixed(0)}% de aprobadas'),
+      _Kpi(
+        'Total clientes',
+        _total,
+        Icons.groups_rounded,
+        _C.blue,
+        'Base del pipeline',
+      ),
+      _Kpi(
+        'Con interés',
+        _conInteres,
+        Icons.directions_car_rounded,
+        _C.green,
+        '${_pct(_conInteres, _total).toStringAsFixed(0)}% del total',
+      ),
+      _Kpi(
+        'Cita aprobada',
+        _citaAprobada,
+        Icons.event_available_rounded,
+        _C.purple,
+        '${_pct(_citaAprobada, _conInteres).toStringAsFixed(0)}% de interesados',
+      ),
+      _Kpi(
+        'Potenciales',
+        _clientePotencial,
+        Icons.star_rounded,
+        _C.orange,
+        '${_pct(_clientePotencial, _citaAprobada).toStringAsFixed(0)}% de aprobadas',
+      ),
     ];
 
     return GridView.count(
@@ -365,17 +403,24 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Text('Embudo de clientes',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              'Embudo de clientes',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
-            child: Text('Fuente: Modelo Predictivo NEXTGEN MOTORS',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5), fontSize: 11)),
+            child: Text(
+              'Fuente: Modelo Predictivo NEXTGEN MOTORS',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 11,
+              ),
+            ),
           ),
           SizedBox(
             height: 320,
@@ -433,10 +478,16 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
   Widget _buildConversionCard() {
     final pasos = [
       _Paso('Interés sobre total', _pct(_conInteres, _total), _C.green),
-      _Paso('Aprobadas sobre interés', _pct(_citaAprobada, _conInteres),
-          _C.purple),
-      _Paso('Potenciales sobre aprobadas',
-          _pct(_clientePotencial, _citaAprobada), _C.orange),
+      _Paso(
+        'Aprobadas sobre interés',
+        _pct(_citaAprobada, _conInteres),
+        _C.purple,
+      ),
+      _Paso(
+        'Potenciales sobre aprobadas',
+        _pct(_clientePotencial, _citaAprobada),
+        _C.orange,
+      ),
       _Paso('Conversión global', _pct(_clientePotencial, _total), _C.blue),
     ];
 
@@ -450,25 +501,32 @@ class _AdvancedChartsViewState extends State<_AdvancedChartsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Conversión entre etapas',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600)),
+          const Text(
+            'Conversión entre etapas',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 14),
           for (final p in pasos) ...[
             Row(
               children: [
                 Expanded(
-                  child: Text(p.etiqueta,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13)),
+                  child: Text(
+                    p.etiqueta,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
                 ),
-                Text('${p.valor.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                        color: p.color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
+                Text(
+                  '${p.valor.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: p.color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -537,21 +595,27 @@ class _KpiCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(kpi.etiqueta,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white60, fontSize: 12)),
+                child: Text(
+                  kpi.etiqueta,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
               ),
             ],
           ),
-          Text('${kpi.valor}',
-              style: TextStyle(
-                  color: kpi.color,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold)),
-          Text(kpi.detalle,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          Text(
+            '${kpi.valor}',
+            style: TextStyle(
+              color: kpi.color,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            kpi.detalle,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white38, fontSize: 11),
+          ),
         ],
       ),
     );
@@ -569,8 +633,10 @@ class _EstadoCargando extends StatelessWidget {
         children: [
           CircularProgressIndicator(color: _C.blue),
           SizedBox(height: 16),
-          Text('Cargando modelo predictivo...',
-              style: TextStyle(color: Colors.white70)),
+          Text(
+            'Cargando modelo predictivo...',
+            style: TextStyle(color: Colors.white70),
+          ),
         ],
       ),
     );
@@ -588,13 +654,19 @@ class _EstadoError extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.cloud_off_rounded, size: 60, color: Colors.redAccent),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 60,
+            color: Colors.redAccent,
+          ),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(mensaje,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70)),
+            child: Text(
+              mensaje,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
+            ),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

@@ -33,6 +33,14 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Temporary Power BI extraction and local tooling
+.pbi-project/
+.pbix-mobile-work/
+.tools/
+*.pbix
+*.pbip
+*-pbip.zip
+
 # Symbolication related
 app.*.symbols
 
