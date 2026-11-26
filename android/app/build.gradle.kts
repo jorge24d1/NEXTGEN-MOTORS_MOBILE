@@ -1,9 +1,16 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+}
+
+val firma = Properties().apply {
+    val archivo = file(System.getenv("NEXTGEN_FIRMA") ?: "${System.getProperty("user.home")}/.nextgen-motors/firma.properties")
+    if (archivo.isFile) archivo.inputStream().use { load(it) }
 }
 
 android {
@@ -32,11 +39,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("oficial") {
+            storeFile = file(firma.getProperty("storeFile", "firma-oficial-no-configurada.jks"))
+            storePassword = firma.getProperty("storePassword")
+            keyAlias = firma.getProperty("keyAlias")
+            keyPassword = firma.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("oficial")
         }
     }
 }

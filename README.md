@@ -8,6 +8,14 @@ El login valida las credenciales con el backend y guarda una sesión de ocho hor
 
 El cierre borra la credencial del dispositivo y solicita su revocación en el servidor. Si el dispositivo está sin red, la credencial remota caduca en su plazo original. Las notificaciones son opcionales. Las citas guardadas muestran un aviso de modo sin conexión y la fecha de su última actualización.
 
+## APK oficial
+
+Android conserva el identificador `com.example.mobile_app` registrado en Firebase. La compilación release usa la clave de producción. Gradle lee `NEXTGEN_FIRMA` o, en su defecto, el archivo `.nextgen-motors/firma.properties` del perfil del usuario. Se necesitan las propiedades `storeFile`, `storePassword`, `keyAlias` y `keyPassword`. Guarda una copia cifrada del almacén y de su configuración fuera del repositorio.
+
+Ejecuta `flutter build apk --release`. El APK universal queda en `build/app/outputs/flutter-apk/app-release.apk`. Verifica la firma antes de subirlo como `nextgen-motors.apk` al release `android-<código>`. Incrementa el código de compilación en `pubspec.yaml` en cada actualización.
+
+La app consulta la versión pública de Spring Boot una vez al iniciar en Android y abre la página oficial de descarga si el cliente pulsa *Actualizar*. Los fallos de red permiten seguir usando la app.
+
 ## Terminal de Android
 
 Desde PowerShell en esta carpeta, ejecuta `.\ejecutar-android.cmd`. Si tienes varios dispositivos, usa `.\ejecutar-android.cmd -d ID` con el identificador que muestra `flutter devices`. El lanzador filtra mensajes rutinarios del emulador, el teclado y las superficies de Android. Mantiene los avisos, los errores y la salida de Flutter. Para consultar la salida completa, usa `flutter run`.
